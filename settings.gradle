@@ -1,0 +1,24 @@
+
+pluginManagement {
+	repositories {
+		mavenCentral()
+		gradlePluginPortal()
+	}
+
+}
+
+buildscript {
+	repositories {
+		mavenCentral()
+	}
+	dependencies {
+		classpath 'com.github.davidmc24.gradle.plugin:gradle-avro-plugin:1.5.0'
+	}
+}
+
+rootProject.name = 'kafka-java-spring'
+
+include 'kafka-configuration'
+include 'streams-a'
+
+

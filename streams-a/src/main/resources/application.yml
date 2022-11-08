@@ -1,0 +1,42 @@
+spring:
+  application:
+    name: streams-a
+  output:
+    ansi:
+      enabled: ALWAYS
+
+#kafka:
+#  producer:
+#    acks: all
+#  streams:
+#    default-deserialization-exception-handler: org.apache.kafka.streams.errors.LogAndContinueExceptionHandler
+#    application-id: streams-a-v0
+#    specific-avro-reader: true
+#    auto-offset-reset: earliest
+#    commit-interval: 10000
+
+application:
+  kafka:
+    "[bootstrap.servers]": localhost:19092
+    "[application.id]": FOO
+  #cleanup-on-start: true
+
+logging:
+  file:
+#    name: ./${spring.application.name}.log
+    name: KAFKA.log
+  pattern:
+    console: "%clr(%d{HH:mm:ss.SSS}){faint} %clr(%-5level) %clr(%logger{0}){cyan} %clr(-){faint} %msg%n"
+    #console: "%clr(%d{HH:mm:ss.SSS}){faint} [%thread] %clr(%-5level) %clr(%logger{0}){cyan} %clr(-){faint} %msg%n"
+    file: "%d{yyyy-MM-dd HH:mm:ss.SSS} [%thread] %-5level %logger{0} - %msg%n"
+  logback:
+    rollingpolicy:
+      max-file-size: 500MB
+      total-size-cap: 2000MB
+      max-history: 10
+  level:
+    root: info
+    org.apache.kafka.clients.consumer: info
+    org.apache.kafka.clients.consumer.internals: warn
+    org.springframework.http.converter.json.Jackson2ObjectMapperBuilder: error
+    org.springframework.web.HttpLogging: error

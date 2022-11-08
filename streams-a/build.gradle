@@ -1,0 +1,41 @@
+
+apply plugin: 'org.springframework.boot'
+
+dependencies {
+
+    implementation project(':kafka-configuration')
+
+//    implementation "io.confluent:kafka-streams-avro-serde:${confluent_io_version}"
+//    implementation "io.confluent:kafka-avro-serializer:${confluent_io_version}"
+
+    implementation group: 'org.apache.kafka', name: 'kafka-streams', version: kafka_version
+
+    //testImplementation group: 'org.apache.kafka', name: 'kafka-streams-test-utils', version: kafka_version
+
+}
+
+bootRun {
+    jvmArgs = [
+//            '-javaagent:../../jmx_prometheus_javaagent.jar=7071:../../streams-config.yml',
+//            '-javaagent:../../jolokia-jvm-1.6.2-agent.jar=port=8778',
+            '-Xdebug',
+            '-agentlib:jdwp=transport=dt_socket,server=y,suspend=n,address=5009'
+    ]
+
+    args = [
+            '--spring.profiles.active=local',
+            '--spring.output.ansi.enabled=ALWAYS'
+    ]
+}
+
+//
+// remove 'jar' artifact and replace iwht 'bootJar' artifact
+//
+// Gradle 6.2+, results in following error otherwise "Artifact {app}-{version}.jar wasn't produced by this build"
+//
+configurations {
+    [apiElements, runtimeElements].each {
+        it.outgoing.artifacts.removeIf { it.buildDependencies.getDependencies(null).contains(jar) }
+        it.outgoing.artifact(bootJar)
+    }
+}

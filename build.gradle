@@ -1,0 +1,158 @@
+import org.apache.tools.ant.filters.ReplaceTokens
+
+plugins {
+    id 'idea'
+    id 'org.springframework.boot' version '2.7.5' apply false
+    id 'io.spring.dependency-management' version '1.1.0' apply false
+    //  id 'com.github.davidmc24.gradle.plugin' apply false
+}
+
+allprojects {
+    repositories {
+        mavenLocal()
+        mavenCentral()
+        maven {
+            url "https://packages.confluent.io/maven/"
+        }
+    }
+}
+
+subprojects {
+    group = 'io.kineticedge'
+    version = projectVersion()
+    description = project.name
+}
+
+
+configure(subprojects.findAll { project -> file("${project.name}/src/main/java").exists() }) {
+
+    apply plugin: 'java'
+    apply plugin: 'maven-publish'
+    apply plugin: 'jacoco'
+
+    sourceCompatibility = JavaVersion.VERSION_11
+    targetCompatibility = JavaVersion.VERSION_11
+
+    dependencies {
+        annotationProcessor group: 'org.springframework.boot', name: 'spring-boot-configuration-processor', version: springboot_version
+
+        implementation group: 'org.springframework.boot', name: 'spring-boot', version: springboot_version
+        implementation group: 'org.springframework.boot', name: 'spring-boot-configuration-processor', version: springboot_version
+        implementation group: 'org.springframework.boot', name: 'spring-boot-starter-actuator', version: springboot_version
+        implementation group: 'org.springframework.boot', name: 'spring-boot-starter-web', version: springboot_version
+
+        implementation group: 'org.hibernate.validator', name: 'hibernate-validator', version: hibernate_validation_version
+
+        implementation group: 'javax.validation', name: 'validation-api', version: validation_api_version
+
+        implementation group: 'org.apache.kafka', name: 'kafka-streams', version: kafka_version
+
+        implementation group: 'org.apache.kafka', name: 'kafka-clients', version: kafka_version
+        implementation group: 'org.apache.commons', name: 'commons-lang3', version: apache_commons_lang3_version
+        implementation group: 'org.slf4j', name: 'slf4j-api', version: slf4j_version
+        implementation group: 'ch.qos.logback', name: 'logback-classic', version: logback_version
+
+        implementation group: 'commons-io', name: 'commons-io', version: apache_commons_io_version
+
+//        implementation group: 'io.confluent', name: 'kafka-avro-serializer', version: confluent_io_version
+//        implementation group: 'io.confluent', name: 'kafka-json-serializer', version: confluent_io_version
+//        implementation group: 'io.confluent', name: 'kafka-json-schema-serializer', version: confluent_io_version
+//        implementation group: 'io.confluent', name: 'kafka-protobuf-serializer', version: confluent_io_version
+//        implementation group: 'io.confluent', name: 'kafka-streams-avro-serde', version: confluent_io_version
+
+        // NEEDED for RBAC security as it requires a specific SASL callback handler
+        //implementation group: 'io.confluent', name: 'kafka-client-plugins', version: confluent_io_enterprise_version
+        //implementation group: 'io.confluent', name: 'monitoring-interceptors', version: confluent_io_version
+
+        implementation group: 'com.fasterxml.jackson.core', name: 'jackson-core', version: jackson_version
+        implementation group: 'com.fasterxml.jackson.core', name: 'jackson-databind', version: jackson_version
+        implementation group: 'com.fasterxml.jackson.datatype', name: 'jackson-datatype-jsr310', version: jackson_version
+        implementation group: 'com.fasterxml.jackson.dataformat', name: 'jackson-dataformat-xml', version: jackson_version
+
+        testImplementation group: 'org.junit.jupiter', name: 'junit-jupiter-api', version: junit_version
+        testRuntimeOnly group: 'org.junit.jupiter', name: 'junit-jupiter-engine', version: junit_version
+        testImplementation group: 'org.junit.jupiter', name: 'junit-jupiter-params', version: junit_version
+    }
+
+    test {
+        useJUnitPlatform()
+    }
+
+    // spring-boot uses logback as logger, exclude all other logger implementation.
+    // only one SL4J should be part of runtime classpath, logback.
+    configurations.all {
+        exclude group: 'org.slf4j', module: 'slf4j-log4j12'
+        exclude group: 'org.slf4j', module: 'slf4j-simple'
+    }
+
+    configurations {
+        compile.exclude module: 'spring-boot-starter-tomcat'
+        compile.exclude group: 'org.apache.tomcat'
+    }
+
+    task createVersionProperties(type: Copy) {
+        from("${project.rootDir}/resources/template/version.properties") {
+            filter(ReplaceTokens, tokens: [
+                    name     : "${project.name}" as String,
+                    version  : "${project.version}" as String,
+                    timestamp: buildTimestamp()
+            ]
+            )
+        }
+        into 'build/resources/main'
+    }
+
+    classes.dependsOn createVersionProperties
+
+    publishing {
+        publications {
+            mavenJava(MavenPublication) {
+                groupId = project.group
+                artifactId = project.name
+                version = project.version
+
+                from components.java
+            }
+        }
+    }
+
+    idea {
+        module {
+            inheritOutputDirs = false
+            outputDir = compileJava.destinationDir
+            testOutputDir = compileTestJava.destinationDir
+        }
+    }
+}
+
+configure(subprojects.findAll { project -> file("${project.name}/run.sh").exists() }) {
+
+    task postBuildScript() {
+        doLast {
+            createClasspath('./.classpath.sh')
+        }
+    }
+
+    build.finalizedBy postBuildScript
+
+    ext.createClasspath = { scriptName ->
+        def cp = sourceSets.main.runtimeClasspath.collect { "export CP=\"\${CP}:${it}\"" }.join("\n")
+        def file = new File(projectDir, scriptName)
+        file.text = 'export CP=""\n' + cp + '\n'
+        file.setExecutable(true)
+    }
+}
+
+
+def projectVersion() {
+    return version;
+}
+
+/**
+ * build timestamp
+ */
+def buildTimestamp() {
+    def formatter = new java.text.SimpleDateFormat("yyyy-MM-dd'T'HH:mm'Z'")
+    formatter.setTimeZone(TimeZone.getTimeZone("UTC"))
+    return formatter.format(new Date())
+}

@@ -1,0 +1,23 @@
+spring:
+  output:
+    ansi:
+      enabled: ALWAYS
+
+kafka:
+  cluster:
+    bootstrap-servers: localhost:19092,localhost:29092,localhost:39092
+    security-protocol: PLAINTEXT
+    schema-registry-urls: http://localhost:8081
+  streams:
+    commit-interval: 5000
+    properties:
+      "[cache.max.bytes.buffering]": 10000000
+
+logging:
+  file:
+    name: /tmp/logs/${spring.application.name}.log
+    max-size: 1MB
+    total-size-cap: 10MB
+    max-history: 7
+  level:
+    io.kienticedge: debug

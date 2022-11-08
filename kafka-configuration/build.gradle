@@ -1,0 +1,9 @@
+
+plugins {
+    id 'java-library'
+}
+
+dependencies {
+    api group: 'javax.validation', name: 'validation-api', version: validation_api_version
+
+}
